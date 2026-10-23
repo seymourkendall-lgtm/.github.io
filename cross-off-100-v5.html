@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cross Off 100</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light dark;
+    --paper: #EDF2EE; --cell: #FFFFFF; --ink: #1B2540; --muted: #5B6683; --grid: #C5D1C9;
+    --marker: #3A47F5; --marker-soft: #DFE2FF; --glow: #FFD84D; --bad: #B3261E; --bad-soft: #FBE4E2;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #121828; --cell: #1B2338; --ink: #E9EDFA; --muted: #9AA5C4; --grid: #2C3753;
+      --marker: #8E98FF; --marker-soft: #262E5C; --glow: #FFD84D; --bad: #FF9A92; --bad-soft: #3A2226;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #121828; --cell: #1B2338; --ink: #E9EDFA; --muted: #9AA5C4; --grid: #2C3753;
+    --marker: #8E98FF; --marker-soft: #262E5C; --glow: #FFD84D; --bad: #FF9A92; --bad-soft: #3A2226;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh; padding: 28px 16px 40px; line-height: 1.45;
+  }
+  main { max-width: 980px; margin: 0 auto; }
+  header { max-width: 680px; }
+  h1 { font-size: clamp(2.2rem, 9vw, 3.6rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin: 0 0 10px; }
+  .intro { margin: 0 0 14px; color: var(--muted); max-width: 62ch; font-size: 1.02rem; }
+
+  .levels { border: 0; padding: 0; margin: 0 0 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .levels legend { font-weight: 700; padding: 0; margin: 0 0 6px; }
+  .levels label { position: relative; cursor: pointer; }
+  .levels input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .levels span {
+    display: inline-block; padding: 6px 14px; border-radius: 999px; border: 1.5px solid var(--grid);
+    background: var(--cell); font-weight: 600; font-size: 0.95rem;
+  }
+  .levels label:hover span { border-color: var(--marker); }
+  .levels input:checked + span { background: var(--marker); border-color: var(--marker); color: var(--paper); }
+  .levels input:focus-visible + span { outline: 3px solid var(--glow); outline-offset: 2px; }
+  #rulesLine { margin: 0 0 14px; font-size: 0.95rem; }
+  #rulesLine strong { color: var(--marker); }
+  .small { color: var(--muted); }
+
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; }
+  .tools li {
+    display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 11px;
+    border: 1.5px solid var(--marker); border-radius: 999px; font-size: 0.92rem; background: var(--cell);
+  }
+  .tools b { font-size: 1.1rem; color: var(--marker); font-weight: 700; }
+  .tools li.blocked { border-color: var(--bad); background: var(--bad-soft); }
+  .tools li.blocked b { color: var(--bad); }
+  #subNote { color: var(--muted); }
+
+  .status { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; margin: 0 0 14px; font-size: 0.95rem; color: var(--muted); }
+  .bar { flex: 1 1 120px; height: 6px; border-radius: 999px; background: var(--grid); overflow: hidden; }
+  .bar span { display: block; height: 100%; width: 0; background: var(--marker); transition: width 0.3s ease; }
+  #subCount {
+    font-weight: 700; color: var(--ink); padding: 3px 10px; border-radius: 6px;
+    background: var(--cell); border: 1.5px solid var(--marker); font-variant-numeric: tabular-nums;
+  }
+  #subCount.low { border-color: var(--bad); background: var(--bad-soft); }
+  #subCount[hidden] { display: none; }
+
+  .play { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "msg" "board" "work"; }
+  @media (min-width: 860px) {
+    .play { grid-template-columns: minmax(0, 1fr) 320px; grid-template-areas: "board msg" "board work"; align-content: start; align-items: start; }
+    .work { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+  }
+
+  #message {
+    grid-area: msg; min-height: 4.4em; padding: 10px 14px; background: var(--cell);
+    border-left: 5px solid var(--marker); border-radius: 6px; font-size: 1.02rem;
+  }
+  #message.bad { border-left-color: var(--bad); background: var(--bad-soft); }
+  sup { font-size: 0.7em; }
+
+  #board { grid-area: board; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+  .cell {
+    position: relative; aspect-ratio: 1; padding: 0; border: 1px solid var(--grid); border-radius: 6px;
+    background: var(--cell); color: var(--ink); font: inherit; font-weight: 600;
+    font-size: clamp(0.78rem, 3.4vw, 1.2rem); font-variant-numeric: tabular-nums;
+    cursor: pointer; overflow: hidden; transition: transform 0.08s ease, border-color 0.15s ease;
+  }
+  @media (min-width: 860px) { .cell { font-size: 1.1rem; } }
+  .cell:hover { border-color: var(--marker); }
+  .cell:active { transform: scale(0.94); }
+  .cell:focus-visible { outline: 3px solid var(--marker); outline-offset: 2px; z-index: 2; }
+  .cell.crossed { background: var(--marker-soft); color: var(--muted); font-weight: 500; border-color: transparent; }
+  .cell.crossed::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(to top right, transparent calc(50% - 1.5px), var(--marker) calc(50% - 1.5px), var(--marker) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+      linear-gradient(to bottom right, transparent calc(50% - 1.5px), var(--marker) calc(50% - 1.5px), var(--marker) calc(50% + 1.5px), transparent calc(50% + 1.5px));
+  }
+  .cell.newest { box-shadow: 0 0 0 3px var(--glow); border-color: transparent; z-index: 1; }
+  .cell.target { background: var(--glow); color: #1B2540; font-weight: 800; border-color: transparent; box-shadow: 0 0 0 3px var(--marker); z-index: 1; }
+  .cell.hint { animation: pulse 0.9s ease-in-out 3; border-color: var(--glow); box-shadow: 0 0 0 3px var(--glow); }
+  .cell.shake { animation: shake 0.35s ease; border-color: var(--bad); }
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+
+  .work { grid-area: work; background: var(--cell); border: 1px solid var(--grid); border-radius: 10px; padding: 14px; }
+  .work label { display: block; font-weight: 700; margin: 0 0 8px; font-size: 1.05rem; }
+  .work label .goal { color: var(--marker); }
+  .entry { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+  #expr {
+    flex: 1; min-width: 0; font: inherit; font-size: 1.35rem; font-weight: 600; font-variant-numeric: tabular-nums;
+    padding: 8px 12px; border: 1.5px solid var(--grid); border-radius: 8px; background: var(--paper); color: var(--ink);
+  }
+  #expr:focus { outline: none; border-color: var(--marker); box-shadow: 0 0 0 3px var(--marker-soft); }
+  .equals { font-size: 1.35rem; font-weight: 700; white-space: nowrap; }
+  .keypad { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .keypad button {
+    font: inherit; font-size: 1.15rem; font-weight: 600; padding: 10px 0; border-radius: 8px;
+    border: 1px solid var(--grid); background: var(--paper); color: var(--ink); cursor: pointer;
+  }
+  .keypad button.op { color: var(--marker); font-weight: 800; }
+  .keypad button.wide { grid-column: span 2; font-size: 1rem; }
+  .keypad button.go { background: var(--marker); color: var(--paper); border-color: var(--marker); }
+  .keypad button:active { transform: scale(0.96); }
+  .keypad button:focus-visible { outline: 3px solid var(--marker); outline-offset: 2px; }
+  .keypad button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .actions button {
+    font: inherit; font-weight: 600; padding: 9px 18px; border-radius: 8px;
+    border: 1.5px solid var(--marker); background: transparent; color: var(--marker); cursor: pointer;
+  }
+  .actions button:focus-visible { outline: 3px solid var(--glow); outline-offset: 2px; }
+  .actions button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cell, .bar span { transition: none; }
+    .cell.hint, .cell.shake { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Cross off 100</h1>
+    <p class="intro">You start with 2 crossed off. Type a math move using numbers you’ve already crossed off, and the answer gets crossed off the board. You can also click a number to set it as your goal, and click it again to clear it. One operation per move, and you can use the same number twice.</p>
+
+    <fieldset class="levels">
+      <legend>Difficulty <span class="small">(changing it starts a new game)</span></legend>
+      <label><input type="radio" name="level" value="easy"><span>Easy</span></label>
+      <label><input type="radio" name="level" value="medium"><span>Medium</span></label>
+      <label><input type="radio" name="level" value="hard"><span>Hard</span></label>
+      <label><input type="radio" name="level" value="expert"><span>Expert</span></label>
+      <label><input type="radio" name="level" value="insane"><span>Insane</span></label>
+    </fieldset>
+    <p id="rulesLine"></p>
+
+    <ul class="tools" aria-label="Allowed operations">
+      <li><b>×</b> multiply</li>
+      <li><b>÷</b> divide</li>
+      <li id="subChip"><b>−</b> <span id="subLabel">subtract</span> <span id="subNote"></span></li>
+      <li><b>x<sup>y</sup></b> exponent</li>
+      <li><b>√</b> square root</li>
+    </ul>
+    <div class="status">
+      <span id="count">1 of 100 crossed off</span>
+      <span id="subCount" hidden></span>
+      <div class="bar" aria-hidden="true"><span id="fill"></span></div>
+    </div>
+  </header>
+
+  <div class="play">
+    <div id="message" role="status" aria-live="polite"></div>
+    <div id="board" role="group" aria-label="Numbers 1 to 100"></div>
+
+    <section class="work" aria-label="Show your work">
+      <label for="expr" id="exprLabel">Type your move</label>
+      <div class="entry">
+        <input id="expr" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. 2 ÷ 2">
+        <span class="equals" id="equals" aria-hidden="true">= ?</span>
+      </div>
+      <div class="keypad" aria-label="Calculator buttons">
+        <button type="button" data-k="7">7</button>
+        <button type="button" data-k="8">8</button>
+        <button type="button" data-k="9">9</button>
+        <button type="button" data-k=" × " class="op" aria-label="multiply">×</button>
+        <button type="button" data-k=" ÷ " class="op" aria-label="divide">÷</button>
+        <button type="button" data-k="4">4</button>
+        <button type="button" data-k="5">5</button>
+        <button type="button" data-k="6">6</button>
+        <button type="button" data-k=" − " class="op" aria-label="subtract">−</button>
+        <button type="button" data-k="^" class="op" aria-label="exponent">x<sup>y</sup></button>
+        <button type="button" data-k="1">1</button>
+        <button type="button" data-k="2">2</button>
+        <button type="button" data-k="3">3</button>
+        <button type="button" data-k="√" class="op" aria-label="square root">√</button>
+        <button type="button" data-k="back" aria-label="delete last character">⌫</button>
+        <button type="button" data-k="0">0</button>
+        <button type="button" data-k="clear" class="wide">Clear</button>
+        <button type="button" data-k="enter" class="wide go" id="goBtn">Cross it off</button>
+      </div>
+      <div class="actions">
+        <button id="hintBtn" type="button">Show me a hint</button>
+        <button id="resetBtn" type="button">Start over</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function () {
+  var N = 100;
+  var LEVELS = {
+    easy:   { name: "Easy",   sub1: true,  streak: 8, max: Infinity },
+    medium: { name: "Medium", sub1: true,  streak: 7, max: Infinity },
+    hard:   { name: "Hard",   sub1: false, streak: 6, max: Infinity },
+    expert: { name: "Expert", sub1: false, streak: 5, max: Infinity },
+    insane: { name: "Insane", sub1: false, streak: 5, max: 24 }
+  };
+  var PRIMES = [];
+  for (var p = 2; p <= N; p++) { var isP = true; for (var q = 2; q * q <= p; q++) if (p % q === 0) isP = false; if (isP) PRIMES.push(p); }
+
+  var level = "medium", L = LEVELS.medium;
+  var crossed, how, newest, target, subStreak, subsUsed, hintTimer;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var board = $("board"), msg = $("message"), countEl = $("count"), fillEl = $("fill"), hintBtn = $("hintBtn"),
+      goBtn = $("goBtn"), expr = $("expr"), exprLabel = $("exprLabel"), equalsEl = $("equals"),
+      subChip = $("subChip"), subLabel = $("subLabel"), subNote = $("subNote"), subCount = $("subCount"), rulesLine = $("rulesLine");
+  var finePointer = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var cells = [];
+
+  for (var i = 1; i <= N; i++) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "cell"; b.textContent = i; b.dataset.n = i;
+    board.appendChild(b); cells[i] = b;
+  }
+
+  function crossedList() { var s = []; for (var i = 1; i <= N; i++) if (crossed[i]) s.push(i); return s; }
+  function total() { return crossedList().length; }
+  function limited() { return isFinite(L.max); }
+  function subsLeft() { return L.max - subsUsed; }
+  function subAllowedNow() { return subStreak < L.streak && subsUsed < L.max; }
+
+  // Can n be made right now without subtracting?
+  function canNonSub(n) {
+    var S = crossedList(), k, j;
+    for (k = 0; k < S.length; k++) { var a = n * S[k]; if (a <= N && crossed[a]) return true; }
+    for (k = 0; k < S.length; k++) if (n % S[k] === 0 && crossed[n / S[k]]) return true;
+    for (k = 0; k < S.length; k++) for (j = 0; j < S.length; j++) if (Math.pow(S[k], S[j]) === n) return true;
+    return n * n <= N && !!crossed[n * n];
+  }
+  // Can n be made by a subtraction (ignoring streak and total limits)?
+  function canSub(n) {
+    var S = crossedList();
+    for (var k = 0; k < S.length; k++) {
+      if (!L.sub1 && S[k] === 1) continue;
+      var a = n + S[k];
+      if (a <= N && crossed[a]) return true;
+    }
+    return false;
+  }
+  // mode: undefined = follow every rule, "any" = ignore streak/total limits, "nosub" = no subtraction
+  function findWay(n, mode) {
+    if (canNonSub(n)) return true;
+    if (mode === "nosub") return false;
+    if (mode === "any") return canSub(n);
+    return subAllowedNow() && canSub(n);
+  }
+  function anyMove() { for (var n = 1; n <= N; n++) if (!crossed[n] && findWay(n)) return true; return false; }
+
+  // Each subtraction can add at most one new independent prime, so this is the fewest subtractions still needed.
+  function vec(n) { return PRIMES.map(function (p) { var e = 0; while (n % p === 0) { n /= p; e++; } return e; }); }
+  function rankOf(nums) {
+    var rows = nums.map(vec), r = 0;
+    for (var col = 0; col < PRIMES.length && r < rows.length; col++) {
+      var piv = -1;
+      for (var i = r; i < rows.length; i++) if (Math.abs(rows[i][col]) > 1e-9) { piv = i; break; }
+      if (piv < 0) continue;
+      var t = rows[r]; rows[r] = rows[piv]; rows[piv] = t;
+      for (i = 0; i < rows.length; i++) if (i !== r && Math.abs(rows[i][col]) > 1e-9) {
+        var f = rows[i][col] / rows[r][col];
+        for (var c = col; c < PRIMES.length; c++) rows[i][c] -= f * rows[r][c];
+      }
+      r++;
+    }
+    return r;
+  }
+  function neededSubs() { return PRIMES.length - rankOf(crossedList()); }
+
+  function render() {
+    var t = total();
+    for (var i = 1; i <= N; i++) {
+      var c = cells[i], done = !!crossed[i];
+      c.classList.toggle("crossed", done);
+      c.classList.toggle("newest", i === newest && i !== target);
+      c.classList.toggle("target", i === target);
+      c.setAttribute("aria-label", i + (done ? ", crossed off" : i === target ? ", selected as goal" : ", not crossed off"));
+      if (done && how[i]) c.title = how[i].replace("<sup>", "^").replace("</sup>", "");
+      else c.removeAttribute("title");
+    }
+    countEl.textContent = t + " of " + N + " crossed off";
+    fillEl.style.width = t + "%";
+    hintBtn.disabled = t === N;
+    goBtn.disabled = t === N;
+    if (target) exprLabel.innerHTML = "Show how you make <span class=\"goal\">" + target + "</span>";
+    else exprLabel.textContent = t === N ? "All done!" : "Type your move";
+
+    subLabel.textContent = L.sub1 ? "subtract" : "subtract, but not 1";
+    var outOfSubs = subsUsed >= L.max, streakFull = subStreak >= L.streak;
+    subChip.classList.toggle("blocked", outOfSubs || streakFull);
+    subNote.textContent = outOfSubs ? "(none left)" :
+      streakFull ? "(" + L.streak + " in a row, use another operation next)" :
+      "(" + subStreak + " of " + L.streak + " in a row)";
+
+    subCount.hidden = !limited();
+    if (limited()) {
+      subCount.textContent = "Subtractions: " + subsUsed + " of " + L.max + " used";
+      subCount.classList.toggle("low", subsLeft() < neededSubs() || subsLeft() <= 3);
+    }
+    preview();
+  }
+
+  function rulesText() {
+    var s = "<strong>" + L.name + ":</strong> " + (L.sub1 ? "subtracting 1 is allowed" : "you can’t subtract 1") +
+      ", and you can subtract up to " + L.streak + " times in a row.";
+    if (limited()) s += " You get only " + L.max + " subtractions in the whole game, the fewest it can be done with, so every one has to bring in a new prime number.";
+    return s;
+  }
+
+  function say(html, bad) { msg.innerHTML = html; msg.classList.toggle("bad", !!bad); }
+  function shake(el) {
+    el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake");
+    setTimeout(function () { el.classList.remove("shake"); }, 400);
+  }
+
+  function reset(note) {
+    crossed = []; how = [];
+    crossed[2] = true; how[2] = "Starting number";
+    newest = 2; target = null; subStreak = 0; subsUsed = 0;
+    clearTimeout(hintTimer);
+    for (var i = 1; i <= N; i++) cells[i].classList.remove("hint", "shake");
+    expr.value = "";
+    rulesLine.innerHTML = rulesText();
+    say((note ? note + " " : "") + "2 is crossed off. Try typing 2 ÷ 2 and pressing “Cross it off” to cross off 1.");
+    render();
+  }
+
+  function setLevel(key, announce) {
+    level = LEVELS[key] ? key : "medium"; L = LEVELS[level];
+    var r = document.querySelector('.levels input[value="' + level + '"]'); if (r) r.checked = true;
+    try { localStorage.setItem("crossoff100-level", level); } catch (e) {}
+    reset(announce ? "Switched to " + L.name + ". New game started." : "");
+  }
+
+  document.querySelector(".levels").addEventListener("change", function (e) {
+    if (e.target.name === "level") setLevel(e.target.value, true);
+  });
+
+  var oops = ["Not yet!", "Close, but not quite.", "Hmm, can’t get there yet."];
+  function listNums(arr) { return arr.length === 1 ? String(arr[0]) : arr.slice(0, -1).join(", ") + " and " + arr[arr.length - 1]; }
+
+  function subBlockedReason(n) {
+    if (subsUsed >= L.max) return "Right now you can only make " + n + " by subtracting, and you’ve used all " + L.max + " subtractions.";
+    return "Right now you can only make " + n + " by subtracting, and you’ve already subtracted " + L.streak +
+      " times in a row. Cross off a number with a different operation first.";
+  }
+
+  // Clicking the board picks (or clears) a goal number.
+  board.addEventListener("click", function (e) {
+    var el = e.target.closest(".cell");
+    if (!el) return;
+    var n = +el.dataset.n;
+    if (crossed[n]) { say(n + " is already crossed off. Pick a different number."); return; }
+    if (n === target) {
+      target = null; expr.value = "";
+      say("Goal cleared. Type any move you like, or pick a different number.");
+      render(); return;
+    }
+    if (!findWay(n)) {
+      if (findWay(n, "any")) say(subBlockedReason(n), true);
+      else {
+        var S = crossedList();
+        var have = S.length <= 6 ? "just " + listNums(S) : "the numbers you have so far";
+        say(oops[Math.floor(Math.random() * oops.length)] + " You can’t make " + n + " in one step from " + have +
+            ". Cross off a few other numbers first, then come back to it.", true);
+      }
+      shake(el); return;
+    }
+    target = n;
+    cells[n].classList.remove("hint");
+    expr.value = "";
+    say(n + " is your goal. Show how you make it, or click it again to clear it.");
+    render();
+    if (finePointer) expr.focus();
+    else document.querySelector(".work").scrollIntoView({ block: "nearest", behavior: reduceMotion ? "auto" : "smooth" });
+  });
+
+  function parse(raw) {
+    var s = raw.replace(/\s+/g, "").toLowerCase()
+      .replace(/sqrt/g, "√").replace(/\*\*/g, "^")
+      .replace(/[*x×·]/g, "×").replace(/[\/÷:]/g, "÷").replace(/[-−–—]/g, "−");
+    if (!s) return { err: "Type the math first, like 2 ÷ 2." };
+    if (s.indexOf("+") !== -1) return { err: "Adding isn’t one of the tools in this game. Try ×, ÷, −, an exponent or a square root." };
+    var m = s.match(/^√\(?(\d+)\)?$/);
+    if (m) return { op: "√", a: +m[1] };
+    m = s.match(/^(\d+)([×÷−^])(\d+)$/);
+    if (m) return { op: m[2], a: +m[1], b: +m[3] };
+    if ((s.match(/[×÷−^√]/g) || []).length > 1) return { err: "Use just one operation per move, like 8 ÷ 2 or 3<sup>2</sup>." };
+    if (/^\d+$/.test(s)) return { err: "Add an operation, like 2 × 2 or √4." };
+    return { err: "That doesn’t look like one operation. Try something like 2 × 2, 8 ÷ 2, 9 − 3, 2^3 or √4." };
+  }
+
+  function show(p, r) {
+    if (p.op === "√") return "√" + p.a + " = " + r;
+    if (p.op === "^") return p.a + "<sup>" + p.b + "</sup> = " + r;
+    return p.a + " " + p.op + " " + p.b + " = " + r;
+  }
+
+  function preview() {
+    var p = parse(expr.value), r = null;
+    if (!p.err) {
+      if (p.op === "×") r = p.a * p.b;
+      else if (p.op === "÷") r = p.b && p.a % p.b === 0 ? p.a / p.b : null;
+      else if (p.op === "−") r = p.a - p.b;
+      else if (p.op === "^") r = Math.pow(p.a, p.b);
+      else { var q = Math.round(Math.sqrt(p.a)); r = q * q === p.a ? q : null; }
+    }
+    equalsEl.textContent = r === null ? (target ? "= " + target : "= ?") : (r > 9999 ? "= too big" : "= " + r);
+  }
+
+  function submit() {
+    if (total() === N) return;
+    var p = parse(expr.value);
+    if (p.err) { say(p.err, true); shake(expr); return; }
+
+    var used = p.op === "√" ? [p.a] : [p.a, p.b];
+    var missing = used.filter(function (x, i) { return !crossed[x] && used.indexOf(x) === i; });
+    if (missing.length) {
+      say("You haven’t crossed off " + listNums(missing) + " yet, so you can’t use " + (missing.length > 1 ? "them" : "it") + ". Use only crossed-off numbers.", true);
+      shake(expr); return;
+    }
+    if (p.op === "−" && p.b === 1 && !L.sub1) {
+      say("Subtracting 1 isn’t allowed on " + L.name + ". Try subtracting a bigger number or using another operation.", true);
+      shake(expr); return;
+    }
+
+    var r;
+    if (p.op === "×") r = p.a * p.b;
+    else if (p.op === "÷") {
+      if (p.a % p.b !== 0) { say(p.a + " ÷ " + p.b + " doesn’t come out to a whole number. Try another way.", true); shake(expr); return; }
+      r = p.a / p.b;
+    }
+    else if (p.op === "−") r = p.a - p.b;
+    else if (p.op === "^") r = Math.pow(p.a, p.b);
+    else {
+      r = Math.round(Math.sqrt(p.a));
+      if (r * r !== p.a) { say("√" + p.a + " isn’t a whole number. Try another way.", true); shake(expr); return; }
+    }
+
+    if (target && r !== target) {
+      say(r > 1e6 ? (p.op === "^" ? p.a + "<sup>" + p.b + "</sup>" : "That") + " makes a number way bigger than 100, not " + target + ". Try another way."
+          : show(p, r) + ". That makes " + r + ", not " + target + ". Try another way.", true);
+      shake(expr); return;
+    }
+    if (!target) {
+      if (r > N) { say((r > 1e6 ? "That makes a number way bigger than 100" : show(p, r) + ". That’s bigger than 100") + ", so it isn’t on the board. Try a smaller move.", true); shake(expr); return; }
+      if (r < 1) { say(show(p, r) + ". That isn’t on the board. Try a different move.", true); shake(expr); return; }
+      if (crossed[r]) { say(show(p, r) + ", but " + r + " is already crossed off. Try making a new number.", true); shake(expr); return; }
+    }
+    if (p.op === "−") {
+      if (subsUsed >= L.max) {
+        say("That math is right, but you’ve used all " + L.max + " subtractions. Make " + r + " another way, or try a different move.", true);
+        shake(expr); return;
+      }
+      if (subStreak >= L.streak) {
+        say("That math is right, but you’ve already subtracted " + L.streak + " times in a row. Find a way to make " + r +
+            " without subtracting, or try a different move.", true);
+        shake(expr); return;
+      }
+    }
+
+    // Success
+    var eq = show(p, r);
+    crossed[r] = true; how[r] = eq; newest = r;
+    if (p.op === "−") { subStreak++; subsUsed++; } else subStreak = 0;
+    target = null; expr.value = "";
+    cells[r].classList.remove("hint");
+
+    var extra = "";
+    if (p.op === "−" && limited()) extra += " That’s " + subsUsed + " of " + L.max + " subtractions used.";
+    if (subStreak === L.streak && subsUsed < L.max) extra += " That’s " + L.streak + " subtractions in a row, so your next move needs a different operation.";
+
+    if (total() === N) {
+      say("<strong>" + eq + "</strong> That’s all 100 on " + L.name + "! Every number from 1 to 100 is crossed off. Great job.");
+    } else if (limited() && subsLeft() < neededSubs()) {
+      var need = neededSubs();
+      say("<strong>" + eq + "</strong> " + r + " is crossed off, but this game can’t be won anymore. You still need at least " + need +
+          " more subtraction" + (need > 1 ? "s" : "") + " to reach every prime, and only " + subsLeft() + " " + (subsLeft() === 1 ? "is" : "are") +
+          " left. Press “Start over” to try again.", true);
+    } else if (!anyMove()) {
+      say("<strong>" + eq + "</strong> " + r + " is crossed off, but now you’re stuck: every number left needs a subtraction you can’t use right now. Press “Start over” to try a different order.", true);
+    } else {
+      say("<strong>" + eq + "</strong> Nice! " + r + " is crossed off." + extra);
+    }
+    render();
+  }
+
+  expr.addEventListener("input", preview);
+  expr.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); submit(); }
+    if (e.key === "Escape") { target = null; expr.value = ""; say("Goal cleared. Type any move you like."); render(); }
+  });
+
+  document.querySelector(".keypad").addEventListener("click", function (e) {
+    var k = e.target.closest("button");
+    if (!k) return;
+    var key = k.dataset.k;
+    if (key === "enter") { submit(); return; }
+    if (key === "clear") expr.value = "";
+    else if (key === "back") expr.value = expr.value.replace(/\s*\S\s*$/, "");
+    else expr.value += key;
+    preview();
+    if (finePointer) expr.focus();
+  });
+
+  hintBtn.addEventListener("click", function () {
+    var options = [], n;
+    for (n = 1; n <= N; n++) if (!crossed[n] && findWay(n, "nosub")) options.push(n);
+    if (!options.length) {
+      var S = crossedList(), base = rankOf(S);
+      for (n = 1; n <= N; n++) {
+        if (crossed[n] || !findWay(n)) continue;
+        if (limited() && rankOf(S.concat([n])) <= base) continue;   // on Insane, never hint a wasted subtraction
+        options.push(n);
+      }
+    }
+    if (!options.length) { say("No number can be made right now. Press “Start over” to try a different order.", true); return; }
+    var pick = options[Math.floor(Math.random() * options.length)];
+    for (var i = 1; i <= N; i++) cells[i].classList.remove("hint");
+    cells[pick].classList.add("hint");
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(function () { cells[pick].classList.remove("hint"); }, 4000);
+    say("Hint: the highlighted number can be made right now. Can you figure out how?");
+  });
+
+  $("resetBtn").addEventListener("click", function () { reset(); });
+
+  var saved = null;
+  try { saved = localStorage.getItem("crossoff100-level"); } catch (e) {}
+  setLevel(saved || "medium", false);
+})();
+</script>
+</body>
+</html>
